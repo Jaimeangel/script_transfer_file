@@ -52,8 +52,10 @@ for archivo in os.listdir(ruta_origen):
     nombre_sin_extension, extension = os.path.splitext(archivo)
     
     if extension == '.txt':
-        if nombre_sin_extension in nombres_archivos:
-            nuevo_nombre = nombres_archivos[nombre_sin_extension]
+        # Extraer la parte del nombre sin la fecha
+        nombre_base = '_'.join(nombre_sin_extension.split('_')[:-1])
+        if nombre_base in nombres_archivos:
+            nuevo_nombre = nombres_archivos[nombre_base]
         else:
             continue
     elif extension == '.001':
