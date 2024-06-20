@@ -102,10 +102,10 @@ def procesar_archivos_genericos(ruta_origen, yyyymmdd, es_ultimo_dia=False):
                 continue
 
 # Obtener la fecha actual y determinar el día de la semana
-hoy = datetime.datetime.today()
-print(f"Fecha {hoy}")
-print()
+#hoy = datetime.datetime.today()
+#print(hoy)
 
+hoy = datetime.datetime(2024, 6, 14)  # Año, Mes, Día
 if hoy.weekday() == 4:  # Viernes
     procesar_archivos_vienes(hoy)
     print()
