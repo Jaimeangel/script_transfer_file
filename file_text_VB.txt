@@ -1,0 +1,47 @@
+Sub SaveEmailAsTextFile()
+    ' Declarar las variables
+    Dim olMail As MailItem
+    Dim MailContent As String
+    Dim MailSubject As String
+    Dim FilePath As String
+    Dim FileName As String
+    Dim FileSystem As Object
+    Dim TextFile As Object
+    
+    ' Verificar que el elemento activo sea un correo
+    If Application.ActiveInspector.CurrentItem.Class = olMail Then
+        Set olMail = Application.ActiveInspector.CurrentItem
+        
+        ' Obtener el contenido del correo en texto plano
+        MailContent = olMail.Body
+        
+        ' Obtener el asunto del correo y limpiar caracteres no válidos para el nombre del archivo
+        MailSubject = olMail.Subject
+        MailSubject = Replace(MailSubject, "/", "-")
+        MailSubject = Replace(MailSubject, "\", "-")
+        MailSubject = Replace(MailSubject, ":", "-")
+        MailSubject = Replace(MailSubject, "*", "")
+        MailSubject = Replace(MailSubject, "?", "")
+        MailSubject = Replace(MailSubject, """", "")
+        MailSubject = Replace(MailSubject, "<", "")
+        MailSubject = Replace(MailSubject, ">", "")
+        MailSubject = Replace(MailSubject, "|", "")
+        
+        ' Definir la ubicación donde se guardará el archivo .txt
+        FilePath = "C:\Tu\Ruta\Deseada\"
+        
+        ' Definir el nombre del archivo con la extensión .txt
+        FileName = FilePath & MailSubject & ".txt"
+        
+        ' Crear el archivo .txt y escribir el contenido del correo
+        Set FileSystem = CreateObject("Scripting.FileSystemObject")
+        Set TextFile = FileSystem.CreateTextFile(FileName, True)
+        TextFile.Write MailContent
+        TextFile.Close
+        
+        ' Mensaje de confirmación
+        MsgBox "El correo ha sido guardado como un archivo .txt en: " & FileName
+    Else
+        MsgBox "Por favor, asegúrate de tener un correo abierto antes de ejecutar la macro."
+    End If
+End Sub
