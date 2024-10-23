@@ -1,0 +1,51 @@
+### 6. Configuración de Macros
+
+La automatización de la obtención de “insumos”, archivo de texto plano, necesarios para generar extractos bancarios es un componente esencial del proceso. Para ello, se utilizan macros que facilitan la recolección de los insumos desde correos electrónicos y los trasladan a una carpeta de destino específica. La configuración de estas macros está diseñada para manejar tanto los extractos diarios como los mensuales, asegurando que los archivos de entrada estén siempre listos para ser procesados por la aplicación.
+
+### 6.1. Macro para Extractos Diarios
+
+Para los extractos diarios, el recurso necesario es el cuerpo del correo electrónico en formato de texto plano. La macro asociada toma el contenido del correo y lo guarda en un archivo `.txt` dentro de la carpeta de destino definida.
+
+El código de la macro se encuentra en el archivo **`Macro_Daily.txt`**, el cual contiene las instrucciones necesarias para la ejecución del proceso. Sin embargo, es importante realizar una modificación antes de utilizarla: deberás ajustar la ruta de la carpeta de destino donde se guardará el archivo `.txt`. Esta línea específica en el código hace referencia a la ubicación de la carpeta, y se debe modificar para que apunte al lugar correcto en tu sistema.
+
+### Pasos para Configurar la Macro de Extractos Diarios:
+
+1. **Accede a la plataforma de Outlook**:
+    - En Outlook, dirígete a la pestaña "Developer" y selecciona la opción "Visual Basic" para abrir el editor de macros.
+2. **Crear la Macro**:
+    - En el editor de Visual Basic, selecciona "Insertar" y luego "Módulo".
+    - Abre el archivo **`Macro_Daily.txt`** y copia todo el código que se encuentra dentro del archivo.
+3. **Modificar la Ruta**:
+    - Localiza la línea del código que hace referencia a la carpeta de destino y cambia la ruta por la ubicación correcta donde deseas que se guarde el archivo `.txt`.
+        - Ejemplo: `destination_folder = "C:\ruta\de\tu\carpeta\"`
+4. **Guardar y Ejecutar la Macro**:
+    - Guarda la macro y ejecútala cuando recibas un correo con el cuerpo en formato de texto necesario para generar los extractos diarios.
+
+Esta macro automatiza la recolección del cuerpo del correo y lo guarda en el archivo `.txt` en la carpeta especificada, listo para ser utilizado en la generación de extractos.
+
+### 6.2. Macro para Extractos Mensuales
+
+Para los extractos mensuales, el recurso necesario es un archivo adjunto que viene en el correo. La macro correspondiente se encarga de descargar este archivo adjunto y trasladarlo a la carpeta de destino, donde será utilizado por la aplicación para generar los extractos mensuales.
+
+El código de la macro se encuentra en el archivo **`Macro_Monthly.txt`**, y al igual que con la macro diaria, es necesario modificar una línea que hace referencia a la carpeta de destino. Esta modificación asegurará que el archivo adjunto se guarde en la ubicación correcta para ser procesado.
+
+### Pasos para Configurar la Macro de Extractos Mensuales:
+
+1. **Accede a la plataforma de Outlook**:
+    - Abre Outlook y navega a la pestaña "Developer", luego selecciona "Visual Basic" para acceder al editor de macros.
+2. **Crear la Macro**:
+    - En el editor de Visual Basic, selecciona "Insertar" y luego "Módulo".
+    - Abre el archivo **`Macro_Monthly.txt`** y copia el código que contiene.
+3. **Modificar la Ruta**:
+    - En el código, localiza la línea que define la ruta de la carpeta de destino y reemplázala con la ruta correcta donde se almacenarán los archivos adjuntos descargados.
+        - Ejemplo: `destination_folder = "C:\ruta\de\tu\carpeta\"`
+4. **Guardar y Ejecutar la Macro**:
+    - Guarda la macro y ejecútala cuando recibas un correo con un archivo adjunto necesario para generar los extractos mensuales.
+
+Esta macro automatiza la descarga del archivo adjunto desde el correo y lo coloca en la carpeta de destino, asegurando que esté disponible para ser utilizado en la generación de los extractos mensuales.
+
+### Resumen del Proceso de Configuración de Macros
+
+Ambas macros son fundamentales para automatizar la preparación de los recursos necesarios para la generación de extractos bancarios. La macro para extractos diarios convierte el cuerpo del correo en un archivo `.txt`, mientras que la macro para extractos mensuales descarga el archivo adjunto correspondiente. Ambas macros deben configurarse correctamente modificando la ruta de la carpeta de destino antes de ser ejecutadas.
+
+Estas macros aseguran que los recursos estén siempre listos y en el formato correcto para ser procesados por la aplicación de generación de extractos, optimizando el flujo de trabajo y reduciendo la intervención manual.
