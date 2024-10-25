@@ -49,3 +49,33 @@ Esta macro automatiza la descarga del archivo adjunto desde el correo y lo coloc
 Ambas macros son fundamentales para automatizar la preparación de los recursos necesarios para la generación de extractos bancarios. La macro para extractos diarios convierte el cuerpo del correo en un archivo `.txt`, mientras que la macro para extractos mensuales descarga el archivo adjunto correspondiente. Ambas macros deben configurarse correctamente modificando la ruta de la carpeta de destino antes de ser ejecutadas.
 
 Estas macros aseguran que los recursos estén siempre listos y en el formato correcto para ser procesados por la aplicación de generación de extractos, optimizando el flujo de trabajo y reduciendo la intervención manual.
+
+
+# UTF-8 encoding required for special characters
+VSVersionInfo(
+    ffi=FixedFileInfo(
+        filevers=(1, 0, 0, 0),
+        prodvers=(1, 0, 0, 0),
+        mask=0x3f,
+        flags=0x0,
+        OS=0x40004,
+        fileType=0x1,
+        subtype=0x0,
+        date=(0, 0)
+    ),
+    var=StringFileInfo(
+        [
+            StringTable(
+                u'040904B0',
+                [StringStruct(u'FileVersion', u'1.0.0.0'),
+                 StringStruct(u'ProductVersion', u'1.0.0.0')]
+            )
+        ]
+    ),
+    var=VarFileInfo([VarStruct(u'Translation', [0x0409, 1200])])
+)
+
+
+
+
+
