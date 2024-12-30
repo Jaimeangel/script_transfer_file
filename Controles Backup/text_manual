@@ -1,125 +1,150 @@
-### 1. Introducción
+import pandas as pd
+import logging
+from decimal import Decimal
+from datetime import datetime
 
-### Objetivo del Manual
+# Configuración del log
+logging.basicConfig(
+    filename="validation.log",
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s"
+)
 
-El propósito de este manual es enseñar el manejo de la aplicación para la creación de extractos bancarios, así como orientar al usuario en la configuración inicial de la misma. Está diseñado para ayudar a los usuarios a entender las funcionalidades principales de la aplicación y cómo aprovechar al máximo sus características.
+# Especificaciones de cada campo
+#   - NUMBER(1,0)  -> (type="NUMBER", max_digits=1, decimal_places=0)
+#   - NUMBER(8,4)  -> (type="NUMBER", max_digits=8, decimal_places=4)
+#   - NUMBER(19)   -> (type="NUMBER", max_digits=19, decimal_places=0)
+#   - DATE (YYYYMMDD o el que necesites)
+#   - VARCHAR(1)
+#   - VARCHAR(20)
+field_specs = {
+    "valor_1": {"type": "NUMBER", "max_digits": 1, "decimal_places": 0},
+    "valor_2": {"type": "NUMBER", "max_digits": 8, "decimal_places": 4},
+    "valor_3": {"type": "NUMBER", "max_digits": 19, "decimal_places": 0},
+    "valor_4": {"type": "DATE", "format": "%Y%m%d"},  # Ajusta tu formato de fecha
+    "valor_5": {"type": "VARCHAR", "max_length": 1},
+    "valor_6": {"type": "VARCHAR", "max_length": 20},
+}
 
-### Descripción de la Aplicación
+def validate_number(value, max_digits, decimal_places):
+    """
+    Valida que 'value' sea un número que no exceda 'max_digits' en total
+    (parte entera + decimales) ni 'decimal_places' como fracción.
+    Retorna None si es válido, o el mensaje de error si es inválido.
+    """
+    # 1) Checar si está vacío o es None
+    if value is None or str(value).strip() == "":
+        return "Valor vacío; se esperaba un número."
 
-La aplicación permite la creación automatizada de extractos bancarios a partir de un archivo de texto plano. Además, ofrece la posibilidad de configurar secciones específicas del extracto, como el aviso legal (disclaimer), el pie de página (footer), y cargar la información relacionada con las tasas de interés. Estas opciones de personalización permiten adaptar el formato del extracto bancario a las necesidades específicas de cada entidad financiera.
+    # 2) Convertir a Decimal
+    try:
+        decimal_value = Decimal(value)
+    except:
+        return f"No es un número válido: {value}"
 
-### 2. Requisitos del Sistema
+    # 3) Contar dígitos
+    sign_stripped = str(decimal_value).lstrip("-")
+    integer_part, _, decimal_part = sign_stripped.partition(".")
+    total_digits = len(integer_part) + len(decimal_part)
 
-La aplicación ha sido desarrollada en Python versión 3, pero no es necesario que el usuario tenga Python instalado en su sistema. Todos los archivos necesarios para la ejecución están incluidos en la carpeta llamada `_internal`, la cual contiene las dependencias y herramientas requeridas para el correcto funcionamiento de la aplicación.
+    # 4) Validar max_digits
+    if total_digits > max_digits:
+        return f"Excede dígitos permitidos (máx {max_digits}): {value}"
 
-### 3. Instalación
+    # 5) Validar decimal_places
+    if len(decimal_part) > decimal_places:
+        return f"Excede decimales permitidos (máx {decimal_places}): {value}"
 
-Para ejecutar la aplicación no es necesaria una instalación previa. Simplemente basta con abrir el programa, y la aplicación comenzará a funcionar normalmente. Es importante asegurarse de que la carpeta `_internal`, que contiene todas las dependencias, esté en la misma ubicación que la aplicación principal.
+    return None  # Sin error
 
-### Base de Datos
 
-La aplicación utiliza una base de datos ligera (SQLite) para almacenar las configuraciones y datos utilizados. Al iniciarse por primera vez, se creará automáticamente una carpeta llamada `database_folder`, la cual contendrá el archivo de base de datos. Este archivo servirá como la fuente de información principal de la aplicación.
+def validate_date(value, date_format):
+    """
+    Valida que 'value' sea una fecha en el formato indicado (por ejemplo '%Y%m%d').
+    Retorna None si es válido, o el mensaje de error si es inválido.
+    """
+    if value is None or str(value).strip() == "":
+        return "Valor vacío; se esperaba una fecha."
 
-Cada vez que la aplicación se ejecute, verificará la existencia de la carpeta `database_folder` y del archivo de base de datos. Si no existen, los creará nuevamente, garantizando así que siempre haya una fuente de información disponible. Es recomendable no eliminar esta carpeta ni el archivo de base de datos, ya que contienen las configuraciones y datos más recientes.
+    try:
+        datetime.strptime(str(value), date_format)
+    except ValueError:
+        return f"Fecha inválida o formato no coincide ({date_format}): {value}"
 
-### Trasladar la Aplicación
+    return None
 
-Si se desea cambiar la ubicación de la aplicación, es importante copiar y trasladar toda la carpeta que contiene:
 
-1. El archivo ejecutable principal de la aplicación.
-2. La carpeta `_internal`, que incluye las dependencias necesarias.
-3. La carpeta `database_folder`, que contiene la base de datos.
+def validate_varchar(value, max_length):
+    """
+    Valida que 'value' no sea None/vacío y no exceda la longitud máxima.
+    Retorna None si es válido, o el mensaje de error si es inválido.
+    """
+    if value is None or str(value).strip() == "":
+        return "Valor vacío; se esperaba texto."
 
-De esta manera, la aplicación conservará todas las configuraciones y datos almacenados previamente.
+    if len(str(value)) > max_length:
+        return f"Excede la longitud máxima permitida ({max_length}): {value}"
 
-### 4. Configuración Inicial de la Aplicación
+    return None
 
-Para acceder a las opciones de configuración de la aplicación, dirígete a la esquina inferior izquierda de la interfaz. Haz clic en el botón derecho para abrir el menú de configuraciones. Este menú te permitirá ajustar diferentes parámetros de la aplicación y cuenta con cuatro opciones principales.
 
-### 4.1. Disclaimer
+def validate_row(row):
+    """
+    Valida una fila (diccionario: {columna: valor}), devolviendo
+    una lista de errores (vacía si no hay errores).
+    """
+    errors = []
+    for field, spec in field_specs.items():
+        value = row.get(field, None)
+        field_type = spec["type"]
 
-En esta opción de configuración, podrás establecer el aviso legal (disclaimer) que aparecerá en el extracto bancario. Por defecto, la caja de texto donde se muestra el disclaimer estará bloqueada para evitar modificaciones accidentales.
+        if field_type == "NUMBER":
+            err = validate_number(value, spec["max_digits"], spec["decimal_places"])
+        elif field_type == "DATE":
+            err = validate_date(value, spec["format"])
+        elif field_type == "VARCHAR":
+            err = validate_varchar(value, spec["max_length"])
+        else:
+            err = f"Tipo desconocido '{field_type}' para '{field}'."
 
-Para editar el contenido, sigue estos pasos:
+        if err:
+            errors.append(f"{field}: {err}")
 
-1. Haz clic en el botón "Edit" para desbloquear la caja de texto.
-2. Escribe o modifica el disclaimer según lo necesites.
-3. Una vez que hayas terminado, haz clic en el botón "Save" para guardar los cambios.
+    return errors
 
-Recuerda que el aviso legal actualizado se reflejará en todos los extractos bancarios generados después de realizar esta configuración.
 
-### 4.2. Footer
+def process_tcl_file(file_path):
+    """
+    Lee el archivo .TCL con pandas, asumiendo que tiene 6 columnas.
+    Aplica las validaciones y registra los errores en un log.
+    """
+    # Leer el archivo sin encabezados. Ajustamos 'names' a la cantidad de campos.
+    df = pd.read_csv(file_path, header=None, names=list(field_specs.keys()), dtype=str)
 
-Esta opción te permite configurar las líneas finales del documento, donde se incluirá información relevante, como la dirección de la empresa y otros datos de importancia general. Cada línea se ubicará en el orden mostrado, de arriba hacia abajo, tal como se visualiza en el editor.
+    # Si el archivo está vacío, df quedará vacío.
+    if df.empty:
+        logging.info("El archivo está vacío; no se encontraron filas para validar.")
+        return
 
-Por defecto, la caja de texto para editar el footer estará bloqueada. Para realizar cambios, sigue estos pasos:
+    any_error = False
 
-1. Haz clic en el botón "Editar" para desbloquear la caja de texto.
-2. Escribe o modifica el contenido del footer según sea necesario.
-3. Haz clic en el botón "Guardar" para confirmar y almacenar los cambios.
+    # Validar fila por fila
+    for index, row in df.iterrows():
+        # row es una Series, la convertimos a dict para usar validate_row
+        row_dict = row.to_dict()
+        errors = validate_row(row_dict)
 
-Los ajustes realizados en el footer se aplicarán a todos los extractos bancarios generados después de esta configuración.
+        if errors:
+            any_error = True
+            # Registrar errores en el log
+            logging.error("Fila %d inválida. Errores:\n  %s", index, "\n  ".join(errors))
+        else:
+            logging.info("Fila %d válida.", index)
 
-### 4.3. Data Center
+    if not any_error:
+        logging.info("No se encontraron valores incorrectos en el archivo.")
 
-Esta opción permite visualizar y cargar la información relacionada con las tasas de interés correspondientes a cada una de las empresas para las cuales se generarán los extractos bancarios.
 
-**Visualización de Tasas de Interés:**
-
-1. Selecciona el año y el mes correspondientes en los campos de selección.
-2. Haz clic en el botón "Buscar" para verificar si existe información de tasas de interés para la fecha seleccionada.
-    - Si hay datos disponibles para esa fecha, se mostrará una tabla con la información solicitada.
-    - Si no se encuentra información, aparecerá un mensaje indicando que no hay datos disponibles.
-
-**Carga de Información:**
-
-- En caso de que no haya información para la fecha seleccionada, será necesario cargar un archivo con las tasas de interés. Para hacerlo:
-    1. Haz clic en el botón "Cargar".
-    2. Se abrirá un explorador de archivos; busca y selecciona el archivo que contiene la información de tasas de interés.
-    3. Una vez cargado el archivo, la tabla se actualizará automáticamente para mostrar los datos recién ingresados.
-
-**Nota Importante:** Si ya existe información para el año y mes seleccionados, los datos se sobreescribirán con la nueva información cargada.
-
-### 4.4. Output File
-
-Esta opción te permite seleccionar la carpeta donde se guardarán los extractos bancarios generados por la aplicación.
-
-**Configuración de la Carpeta de Destino:**
-
-1. Haz clic en el botón "Select Folder".
-2. Se abrirá un explorador de archivos donde podrás elegir la carpeta de destino en la que deseas que se guarden los archivos generados.
-3. Una vez seleccionada la carpeta, todos los extractos bancarios creados se enviarán automáticamente a esa ubicación.
-
-Esta configuración garantiza que los archivos generados sean almacenados en el lugar especificado, facilitando su acceso y gestión.
-
-### 5. Generación de Extractos
-
-Para generar los extractos bancarios, es necesario acceder al módulo de extractos de la aplicación. Sigue estos pasos para comenzar:
-
-1. **Acceso al Módulo de Extractos**:
-    - Haz clic en el botón situado en la esquina inferior izquierda de la interfaz.
-    - Se desplegarán dos opciones: "Daily Statement" y "Monthly Statement", correspondientes a la generación de extractos diarios y mensuales, respectivamente.
-2. **Selección del Tipo de Extracto**:
-    - Elige la opción que se ajuste a tus necesidades:
-        - **Daily Statement** para generar un extracto diario.
-        - **Monthly Statement** para generar un extracto mensual.
-3. **Configuración para Generar el Extracto**:
-    - Al hacer clic en cualquiera de las opciones ("Daily Statement" o "Monthly Statement"), deberás completar los siguientes pasos:
-        1. **Seleccionar el Archivo de Entrada**:
-            - Elige el archivo que contiene la información de los extractos.
-                - Para extractos diarios, selecciona un archivo con formato `.txt`.
-                - Para extractos mensuales, selecciona un archivo con formato `.bin`.
-        2. **Elegir la Fecha de la Tasa de Interés**:
-            - Selecciona el año y el mes correspondientes a la tasa de interés que se aplicará en los extractos generados.
-        3. **Verificación de Opciones**:
-            - Asegúrate de que las tres opciones (archivo de entrada, año, y mes) están configuradas correctamente.
-4. **Ejecutar el Proceso de Generación**:
-    - Una vez que todas las opciones estén listas, haz clic en el botón "Run process" para iniciar la generación del extracto.
-5. **Visualización de Clientes Detectados**:
-    - Después de hacer clic en "Run process", se abrirá una nueva ventana que mostrará una tabla con los clientes detectados en el archivo seleccionado. La tabla incluirá solo aquellos NITs de clientes que fueron encontrados en el documento.
-6. **Selección de Clientes para Generar los Extractos**:
-    - Para generar los extractos, debes seleccionar uno o más clientes de la tabla.
-        - Al lado izquierdo de cada fila de cliente hay un botón tipo checkbox; marca el checkbox correspondiente para seleccionar un cliente específico.
-        - Si deseas seleccionar todos los clientes, haz clic en el checkbox de la primera fila de la primera columna, que seleccionará todas las filas de la tabla.
-7. **Generar el Extracto**:
-    - Una vez que hayas seleccionado los clientes, haz clic en el botón "Generate statement" ubicado en la parte superior de la ventana para iniciar la generación de los extractos para los clientes seleccionados.
+# Ejemplo de uso:
+if __name__ == "__main__":
+    process_tcl_file("interfaz.tcl")
