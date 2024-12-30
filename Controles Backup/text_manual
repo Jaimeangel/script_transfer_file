@@ -10,77 +10,117 @@ logging.basicConfig(
     format="%(levelname)s - %(message)s"
 )
 
-# Especificaciones de cada campo
-#   - NUMBER(1,0)  -> (type="NUMBER", max_digits=1, decimal_places=0)
-#   - NUMBER(8,4)  -> (type="NUMBER", max_digits=8, decimal_places=4)
-#   - NUMBER(19)   -> (type="NUMBER", max_digits=19, decimal_places=0)
-#   - DATE (YYYYMMDD o el que necesites)
-#   - VARCHAR(1)
-#   - VARCHAR(20)
+# Diccionario de especificaciones con los nuevos campos:
+#   - Para 'NUMBER': {"type": "NUMBER", "mindigits": ..., "maxdigits": ..., "decimalplaces": ..., "optional": ...}
+#   - Para 'DATE':   {"type": "DATE",   "format": ...,                     "optional": ...}
+#   - Para 'VARCHAR':{"type": "VARCHAR","max_length": ...,                 "optional": ...}
 field_specs = {
-    "valor_1": {"type": "NUMBER", "max_digits": 1, "decimal_places": 0},
-    "valor_2": {"type": "NUMBER", "max_digits": 8, "decimal_places": 4},
-    "valor_3": {"type": "NUMBER", "max_digits": 19, "decimal_places": 0},
-    "valor_4": {"type": "DATE", "format": "%Y%m%d"},  # Ajusta tu formato de fecha
-    "valor_5": {"type": "VARCHAR", "max_length": 1},
-    "valor_6": {"type": "VARCHAR", "max_length": 20},
+    "valor_1": {
+        "type": "NUMBER",
+        "mindigits": 1,
+        "maxdigits": 1,
+        "decimalplaces": 0,
+        "optional": False
+    },
+    "valor_2": {
+        "type": "NUMBER",
+        "mindigits": 1,
+        "maxdigits": 8,
+        "decimalplaces": 4,
+        "optional": False
+    },
+    "valor_3": {
+        "type": "NUMBER",
+        "mindigits": 1,
+        "maxdigits": 19,
+        "decimalplaces": 0,
+        "optional": False
+    },
+    "valor_4": {
+        "type": "DATE",
+        "format": "%Y%m%d",  # Ajusta tu formato de fecha
+        "optional": False
+    },
+    "valor_5": {
+        "type": "VARCHAR",
+        "max_length": 1,
+        "optional": False
+    },
+    "valor_6": {
+        "type": "VARCHAR",
+        "max_length": 20,
+        "optional": False
+    },
 }
 
-def validate_number(value, max_digits, decimal_places):
+def validate_number(value, mindigits, maxdigits, decimalplaces, optional):
     """
-    Valida que 'value' sea un número que no exceda 'max_digits' en total
-    (parte entera + decimales) ni 'decimal_places' como fracción.
-    Retorna None si es válido, o el mensaje de error si es inválido.
+    Valida un valor numérico según mindigits, maxdigits y decimalplaces.
+    Si 'optional' es True y el valor está vacío/None, no marca error.
+    Retorna None si es válido, o un mensaje de error si es inválido.
     """
-    # 1) Checar si está vacío o es None
-    if value is None or str(value).strip() == "":
-        return "Valor vacío; se esperaba un número."
+    # Caso opcional: si el valor está vacío y es opcional, no se considera error
+    if optional and (value is None or str(value).strip() == ""):
+        return None
+    
+    # Si no es opcional y está vacío, marcamos error
+    if not optional and (value is None or str(value).strip() == ""):
+        return "Valor vacío; se esperaba un número obligatorio."
 
-    # 2) Convertir a Decimal
+    # 1) Convertir a Decimal
     try:
         decimal_value = Decimal(value)
     except:
         return f"No es un número válido: {value}"
 
-    # 3) Contar dígitos
+    # 2) Separar parte entera y decimal
     sign_stripped = str(decimal_value).lstrip("-")
     integer_part, _, decimal_part = sign_stripped.partition(".")
     total_digits = len(integer_part) + len(decimal_part)
 
-    # 4) Validar max_digits
-    if total_digits > max_digits:
-        return f"Excede dígitos permitidos (máx {max_digits}): {value}"
+    # 3) Validar mindigits y maxdigits
+    if total_digits < mindigits:
+        return f"Tiene menos de {mindigits} dígitos permitidos: {value}"
+    if total_digits > maxdigits:
+        return f"Excede dígitos permitidos (máx {maxdigits}): {value}"
 
-    # 5) Validar decimal_places
-    if len(decimal_part) > decimal_places:
-        return f"Excede decimales permitidos (máx {decimal_places}): {value}"
+    # 4) Validar decimalplaces
+    if len(decimal_part) > decimalplaces:
+        return f"Excede decimales permitidos (máx {decimalplaces}): {value}"
 
     return None  # Sin error
 
 
-def validate_date(value, date_format):
+def validate_date(value, date_format, optional):
     """
-    Valida que 'value' sea una fecha en el formato indicado (por ejemplo '%Y%m%d').
-    Retorna None si es válido, o el mensaje de error si es inválido.
+    Valida que 'value' sea una fecha con el 'date_format' indicado.
+    Si 'optional' es True y está vacío/None, no marca error.
+    Retorna None si es válido, o mensaje de error si es inválido.
     """
-    if value is None or str(value).strip() == "":
-        return "Valor vacío; se esperaba una fecha."
+    if optional and (value is None or str(value).strip() == ""):
+        return None
+    
+    if not optional and (value is None or str(value).strip() == ""):
+        return "Valor vacío; se esperaba una fecha obligatoria."
 
     try:
         datetime.strptime(str(value), date_format)
     except ValueError:
         return f"Fecha inválida o formato no coincide ({date_format}): {value}"
-
+    
     return None
 
 
-def validate_varchar(value, max_length):
+def validate_varchar(value, max_length, optional):
     """
-    Valida que 'value' no sea None/vacío y no exceda la longitud máxima.
-    Retorna None si es válido, o el mensaje de error si es inválido.
+    Valida que 'value' no exceda max_length, o si es obligatorio, que no sea vacío.
+    Retorna None si es válido, o mensaje de error si es inválido.
     """
-    if value is None or str(value).strip() == "":
-        return "Valor vacío; se esperaba texto."
+    if optional and (value is None or str(value).strip() == ""):
+        return None
+    
+    if not optional and (value is None or str(value).strip() == ""):
+        return "Valor vacío; se esperaba texto obligatorio."
 
     if len(str(value)) > max_length:
         return f"Excede la longitud máxima permitida ({max_length}): {value}"
@@ -90,20 +130,27 @@ def validate_varchar(value, max_length):
 
 def validate_row(row):
     """
-    Valida una fila (diccionario: {columna: valor}), devolviendo
-    una lista de errores (vacía si no hay errores).
+    Valida una fila (dict) según 'field_specs'.
+    Devuelve lista de errores (vacía si no hay errores).
     """
     errors = []
     for field, spec in field_specs.items():
         value = row.get(field, None)
         field_type = spec["type"]
+        optional = spec["optional"]
 
         if field_type == "NUMBER":
-            err = validate_number(value, spec["max_digits"], spec["decimal_places"])
+            err = validate_number(
+                value,
+                spec["mindigits"],
+                spec["maxdigits"],
+                spec["decimalplaces"],
+                optional
+            )
         elif field_type == "DATE":
-            err = validate_date(value, spec["format"])
+            err = validate_date(value, spec["format"], optional)
         elif field_type == "VARCHAR":
-            err = validate_varchar(value, spec["max_length"])
+            err = validate_varchar(value, spec["max_length"], optional)
         else:
             err = f"Tipo desconocido '{field_type}' para '{field}'."
 
@@ -115,28 +162,22 @@ def validate_row(row):
 
 def process_tcl_file(file_path):
     """
-    Lee el archivo .TCL con pandas, asumiendo que tiene 6 columnas.
-    Aplica las validaciones y registra los errores en un log.
+    Lee el archivo .TCL con pandas, usando las claves de field_specs como nombres de columna.
+    Aplica validaciones y registra errores en el log.
     """
-    # Leer el archivo sin encabezados. Ajustamos 'names' a la cantidad de campos.
     df = pd.read_csv(file_path, header=None, names=list(field_specs.keys()), dtype=str)
 
-    # Si el archivo está vacío, df quedará vacío.
     if df.empty:
         logging.info("El archivo está vacío; no se encontraron filas para validar.")
         return
 
     any_error = False
 
-    # Validar fila por fila
     for index, row in df.iterrows():
-        # row es una Series, la convertimos a dict para usar validate_row
         row_dict = row.to_dict()
         errors = validate_row(row_dict)
-
         if errors:
             any_error = True
-            # Registrar errores en el log
             logging.error("Fila %d inválida. Errores:\n  %s", index, "\n  ".join(errors))
         else:
             logging.info("Fila %d válida.", index)
@@ -145,6 +186,6 @@ def process_tcl_file(file_path):
         logging.info("No se encontraron valores incorrectos en el archivo.")
 
 
-# Ejemplo de uso:
 if __name__ == "__main__":
     process_tcl_file("interfaz.tcl")
+
