@@ -53,42 +53,46 @@ field_specs = {
     },
 }
 
+
 def validate_number(value, mindigits, maxdigits, decimalplaces, optional):
     """
     Valida un valor numérico según mindigits, maxdigits y decimalplaces.
-    Si 'optional' es True y el valor está vacío/None, no marca error.
     Retorna None si es válido, o un mensaje de error si es inválido.
     """
-    # Caso opcional: si el valor está vacío y es opcional, no se considera error
+    # Caso opcional: si el valor está vacío y es opcional, no marca error
     if optional and (value is None or str(value).strip() == ""):
         return None
-    
-    # Si no es opcional y está vacío, marcamos error
+
+    # Si no es opcional y está vacío, marcar error
     if not optional and (value is None or str(value).strip() == ""):
         return "Valor vacío; se esperaba un número obligatorio."
 
-    # 1) Convertir a Decimal
+    # Intentar convertir a Decimal
     try:
         decimal_value = Decimal(value)
     except:
         return f"No es un número válido: {value}"
 
-    # 2) Separar parte entera y decimal
+    # Separar parte entera y decimal
     sign_stripped = str(decimal_value).lstrip("-")
     integer_part, _, decimal_part = sign_stripped.partition(".")
+    decimal_part = decimal_part.ljust(decimalplaces, "0")  # Ajustar decimales si faltan
+
+    # Contar dígitos totales
     total_digits = len(integer_part) + len(decimal_part)
 
-    # 3) Validar mindigits y maxdigits
+    # Validar dígitos totales exactos (mindigits)
     if total_digits < mindigits:
-        return f"Tiene menos de {mindigits} dígitos permitidos: {value}"
+        return f"Tiene menos de {mindigits} dígitos totales: {value}"
     if total_digits > maxdigits:
-        return f"Excede dígitos permitidos (máx {maxdigits}): {value}"
+        return f"Excede los {maxdigits} dígitos totales permitidos: {value}"
 
-    # 4) Validar decimalplaces
-    if len(decimal_part) > decimalplaces:
-        return f"Excede decimales permitidos (máx {decimalplaces}): {value}"
+    # Validar número de decimales exactos
+    if len(decimal_part) != decimalplaces:
+        return f"Debe tener exactamente {decimalplaces} decimales: {value}"
 
     return None  # Sin error
+
 
 
 def validate_date(value, date_format, optional):
