@@ -1,0 +1,63 @@
+import pandas as pd
+import sys
+
+def generate_sql(excel_file, target_date, table_name="MI_TABLA"):
+    # Leer el archivo Excel (se asume que el archivo tiene header)
+    df = pd.read_excel(excel_file)
+    
+    # Asegurarse de que la columna 'DATE' sea de tipo string para comparar
+    df['DATE'] = df['DATE'].astype(str)
+    
+    # Filtrar únicamente las filas para la fecha objetivo
+    df_filtered = df[df['DATE'] == target_date]
+    
+    # Abrir un archivo de salida para escribir el script SQL
+    with open("output.sql", "w", encoding="utf-8") as f:
+        # Generar el comando DELETE para el día especificado
+        delete_command = (
+            f"DELETE FROM {table_name} "
+            f"WHERE DATE = TO_DATE('{target_date}', 'YYYYMMDD');\n\n"
+        )
+        f.write(delete_command)
+        
+        # Obtener la lista de columnas (se asume que son 13)
+        columns = df.columns.tolist()
+        
+        # Generar el comando INSERT para cada fila filtrada
+        for _, row in df_filtered.iterrows():
+            values = []
+            for col in columns:
+                value = row[col]
+                if pd.isna(value):
+                    # Si el valor es nulo, usar NULL
+                    values.append("NULL")
+                else:
+                    # Si es la columna DATE, se convierte con TO_DATE
+                    if col.upper() == "DATE":
+                        values.append(f"TO_DATE('{str(value)}','YYYYMMDD')")
+                    else:
+                        # Si el valor es numérico, se deja sin comillas; de lo contrario se trata como string
+                        if isinstance(value, (int, float)):
+                            values.append(str(value))
+                        else:
+                            # Escapar comillas simples en el valor
+                            str_value = str(value).replace("'", "''")
+                            values.append(f"'{str_value}'")
+            
+            cols_str = ", ".join(columns)
+            vals_str = ", ".join(values)
+            insert_command = f"INSERT INTO {table_name} ({cols_str}) VALUES ({vals_str});\n"
+            f.write(insert_command)
+            
+    print("Archivo SQL generado exitosamente en 'output.sql'.")
+
+if __name__ == "__main__":
+    # Uso: python generate_sql.py <ruta_del_excel> <fecha_objetivo (YYYYMMDD)>
+    if len(sys.argv) != 3:
+        print("Uso: python generate_sql.py <excel_file> <target_date (YYYYMMDD)>")
+        sys.exit(1)
+        
+    excel_file = sys.argv[1]
+    target_date = sys.argv[2]
+    
+    generate_sql(excel_file, target_date)
